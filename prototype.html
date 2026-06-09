@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salesforce Leave Tracker - Interactive Prototype</title>
+    <!-- Salesforce Lightning Design System (SLDS) CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/design-system/2.21.4/styles/salesforce-lightning-design-system.min.css" integrity="sha512-4y19pT3+TzZf1QW+28C+C9u5xHh0p7g/8/j2CqC5iQ0tH900N0pA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            padding: 2rem;
+            background-color: #f3f3f3;
+            font-family: 'Salesforce Sans', Arial, sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.1);
+        }
+        .header-bg {
+            background-color: #f3f3f3;
+            border-bottom: 1px solid #dddbda;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+        .status-Approved {
+            background-color: #4bca81;
+            color: white;
+        }
+        .status-Rejected {
+            background-color: #ff9f00;
+            color: white;
+        }
+        .status-Pending {
+            background-color: #1589ee;
+            color: white;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notifications -->
+    <div id="toast" class="toast-container">
+        <div class="slds-notify_container slds-is-relative">
+            <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+                <span class="slds-assistive-text">success</span>
+                <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-middle" title="Description of icon when needed">
+                    <svg class="slds-icon slds-icon_small" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.4-1.4 3.6 3.6 7.6-7.6 1.4 1.4-9 9z"/></svg>
+                </span>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_small " id="toast-message">Data saved successfully</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container slds-card">
+        <!-- Header -->
+        <div class="slds-page-header header-bg">
+            <div class="slds-page-header__row">
+                <div class="slds-page-header__col-title">
+                    <div class="slds-media">
+                        <div class="slds-media__figure">
+                            <span class="slds-icon_container slds-icon-standard-event" title="Leave Tracker">
+                                <svg class="slds-icon slds-page-header__icon" aria-hidden="true" viewBox="0 0 24 24" fill="#ffffff" style="background:#5c6bc0; padding:6px; border-radius:4px;"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z"/></svg>
+                            </span>
+                        </div>
+                        <div class="slds-media__body">
+                            <div class="slds-page-header__name">
+                                <div class="slds-page-header__name-title">
+                                    <h1>
+                                        <span class="slds-page-header__title slds-truncate" title="Leave Tracker">Leave Tracker</span>
+                                    </h1>
+                                </div>
+                            </div>
+                            <p class="slds-page-header__name-meta">Interactive Prototype (LWC Simulation)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Set Navigation -->
+        <div class="slds-tabs_default">
+            <ul class="slds-tabs_default__nav" role="tablist">
+                <li id="my-leaves-tab" class="slds-tabs_default__item slds-is-active" title="My Leaves" role="presentation">
+                    <a class="slds-tabs_default__link" href="javascript:void(0);" onclick="switchTab('my-leaves')" role="tab" tabindex="0" aria-selected="true" aria-controls="tab-default-1" id="tab-default-1__item">My Leaves</a>
+                </li>
+                <li id="leave-requests-tab" class="slds-tabs_default__item" title="Leave Requests" role="presentation">
+                    <a class="slds-tabs_default__link" href="javascript:void(0);" onclick="switchTab('leave-requests')" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-default-2" id="tab-default-2__item">Leave Requests</a>
+                </li>
+            </ul>
+
+            <!-- Tab 1: My Leaves -->
+            <div id="tab-default-1" class="slds-tabs_default__content slds-show" role="tabpanel" aria-labelledby="tab-default-1__item">
+                <div class="slds-p-around_medium">
+                    <div class="slds-grid slds-grid_align-spread slds-m-bottom_medium">
+                        <h2 class="slds-text-heading_medium">My Submitted Leaves</h2>
+                        <button class="slds-button slds-button_brand" onclick="openNewRequestModal()">
+                            <svg class="slds-button__icon slds-button__icon_left" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New Leave Request
+                        </button>
+                    </div>
+
+                    <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_col-bordered">
+                        <thead>
+                            <tr class="slds-line-height_reset">
+                                <th scope="col"><div class="slds-truncate" title="Request ID">Request ID</div></th>
+                                <th scope="col"><div class="slds-truncate" title="From Date">From Date</div></th>
+                                <th scope="col"><div class="slds-truncate" title="To Date">To Date</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Reason">Reason</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Status">Status</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Manager Comment">Manager Comment</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Action">Action</div></th>
+                            </tr>
+                        </thead>
+                        <tbody id="my-leaves-body">
+                            <!-- Dynamic Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab 2: Leave Requests (Manager) -->
+            <div id="tab-default-2" class="slds-tabs_default__content slds-hide" role="tabpanel" aria-labelledby="tab-default-2__item">
+                <div class="slds-p-around_medium">
+                    <div class="slds-grid slds-grid_align-spread slds-m-bottom_medium">
+                        <h2 class="slds-text-heading_medium">Pending Approvals from Team</h2>
+                    </div>
+
+                    <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_col-bordered">
+                        <thead>
+                            <tr class="slds-line-height_reset">
+                                <th scope="col"><div class="slds-truncate" title="Request ID">Request ID</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Employee Name">Employee</div></th>
+                                <th scope="col"><div class="slds-truncate" title="From Date">From Date</div></th>
+                                <th scope="col"><div class="slds-truncate" title="To Date">To Date</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Reason">Reason</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Status">Status</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Manager Comment">Manager Comment</div></th>
+                                <th scope="col"><div class="slds-truncate" title="Action">Action</div></th>
+                            </tr>
+                        </thead>
+                        <tbody id="manager-requests-body">
+                            <!-- Dynamic Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: New Leave Request (Employee) -->
+    <div id="new-request-modal" class="slds-hide">
+        <section role="dialog" tabindex="-1" aria-modal="true" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="closeNewRequestModal()">
+                        X
+                    </button>
+                    <h2 class="slds-modal__title slds-hyphenate">Submit New Leave Request</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-form slds-form_stacked">
+                        <div class="slds-form-element">
+                            <label class="slds-form-element__label" for="from-date">From Date</label>
+                            <div class="slds-form-element__control">
+                                <input type="date" id="from-date" class="slds-input" required />
+                            </div>
+                        </div>
+                        <div class="slds-form-element slds-m-top_medium">
+                            <label class="slds-form-element__label" for="to-date">To Date</label>
+                            <div class="slds-form-element__control">
+                                <input type="date" id="to-date" class="slds-input" required />
+                            </div>
+                        </div>
+                        <div class="slds-form-element slds-m-top_medium">
+                            <label class="slds-form-element__label" for="reason">Reason for Leave</label>
+                            <div class="slds-form-element__control">
+                                <textarea id="reason" class="slds-textarea" placeholder="Explain your leave reason..." required></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" onclick="closeNewRequestModal()">Cancel</button>
+                    <button class="slds-button slds-button_brand" onclick="submitNewRequest()">Submit Request</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </div>
+
+    <!-- Modal: Review / Action Request (Manager) -->
+    <div id="review-modal" class="slds-hide">
+        <section role="dialog" tabindex="-1" aria-modal="true" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick="closeReviewModal()">
+                        X
+                    </button>
+                    <h2 class="slds-modal__title slds-hyphenate">Review Leave Request</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div id="review-details" class="slds-m-bottom_medium">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div class="slds-form slds-form_stacked">
+                        <div class="slds-form-element">
+                            <label class="slds-form-element__label" for="review-status">Decision</label>
+                            <div class="slds-form-element__control">
+                                <div class="slds-select_container">
+                                    <select id="review-status" class="slds-select">
+                                        <option value="Approved">Approve</option>
+                                        <option value="Rejected">Reject</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-form-element slds-m-top_medium">
+                            <label class="slds-form-element__label" for="review-comment">Manager Comments</label>
+                            <div class="slds-form-element__control">
+                                <textarea id="review-comment" class="slds-textarea" placeholder="Provide reason or feedback..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" onclick="closeReviewModal()">Cancel</button>
+                    <button class="slds-button slds-button_brand" onclick="saveReviewDecision()">Save Decision</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </div>
+
+    <!-- Core Scripting -->
+    <script>
+        // In-memory data store mimicking Salesforce Database
+        let database = [
+            { id: "LR-001", user: "Keshav Rathi", fromDate: "2026-06-15", toDate: "2026-06-16", reason: "Family Event", status: "Approved", comment: "Have fun!" },
+            { id: "LR-002", user: "Keshav Rathi", fromDate: "2026-06-20", toDate: "2026-06-22", reason: "Medical Checkup", status: "Pending", comment: "" },
+            { id: "LR-003", user: "Amit Sharma", fromDate: "2026-06-12", toDate: "2026-06-12", reason: "Personal work", status: "Pending", comment: "" },
+            { id: "LR-004", user: "Rahul Verma", fromDate: "2026-06-18", toDate: "2026-06-25", reason: "Summer Vacation", status: "Pending", comment: "" }
+        ];
+
+        const currentUser = "Keshav Rathi";
+        let activeReviewId = null;
+
+        // Render Tables
+        function renderData() {
+            const myLeavesBody = document.getElementById("my-leaves-body");
+            const managerRequestsBody = document.getElementById("manager-requests-body");
+            
+            myLeavesBody.innerHTML = "";
+            managerRequestsBody.innerHTML = "";
+
+            // Render My Leaves Tab (Only current user's leaves)
+            database.filter(req => req.user === currentUser).forEach(req => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${req.id}</td>
+                    <td>${req.fromDate}</td>
+                    <td>${req.toDate}</td>
+                    <td>${req.reason}</td>
+                    <td><span class="status-badge status-${req.status}">${req.status}</span></td>
+                    <td>${req.comment || '<i>No comment yet</i>'}</td>
+                    <td>
+                        <button class="slds-button slds-button_neutral" onclick="editMyRequest('${req.id}')" ${req.status !== 'Pending' ? 'disabled' : ''}>
+                            Edit
+                        </button>
+                    </td>
+                `;
+                myLeavesBody.appendChild(row);
+            });
+
+            // Render Manager View (Simulated: Requesting users who are NOT the manager)
+            database.filter(req => req.user !== currentUser).forEach(req => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${req.id}</td>
+                    <td><strong>${req.user}</strong></td>
+                    <td>${req.fromDate}</td>
+                    <td>${req.toDate}</td>
+                    <td>${req.reason}</td>
+                    <td><span class="status-badge status-${req.status}">${req.status}</span></td>
+                    <td>${req.comment || '<i>No comment yet</i>'}</td>
+                    <td>
+                        <button class="slds-button slds-button_brand" onclick="openReviewModal('${req.id}')" ${req.status !== 'Pending' ? 'disabled' : ''}>
+                            Review
+                        </button>
+                    </td>
+                `;
+                managerRequestsBody.appendChild(row);
+            });
+        }
+
+        // Tab Switching Logic
+        function switchTab(tab) {
+            const myLeavesTab = document.getElementById("my-leaves-tab");
+            const leaveRequestsTab = document.getElementById("leave-requests-tab");
+            const tab1 = document.getElementById("tab-default-1");
+            const tab2 = document.getElementById("tab-default-2");
+
+            if (tab === 'my-leaves') {
+                myLeavesTab.classList.add("slds-is-active");
+                leaveRequestsTab.classList.remove("slds-is-active");
+                tab1.classList.remove("slds-hide");
+                tab1.classList.add("slds-show");
+                tab2.classList.remove("slds-show");
+                tab2.classList.add("slds-hide");
+            } else {
+                leaveRequestsTab.classList.add("slds-is-active");
+                myLeavesTab.classList.remove("slds-is-active");
+                tab2.classList.remove("slds-hide");
+                tab2.classList.add("slds-show");
+                tab1.classList.remove("slds-show");
+                tab1.classList.add("slds-hide");
+            }
+        }
+
+        // Modal triggers
+        function openNewRequestModal() {
+            // Set defaults to avoid past dates validation trigger
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById("from-date").value = today;
+            document.getElementById("to-date").value = today;
+            document.getElementById("reason").value = "";
+            document.getElementById("new-request-modal").classList.remove("slds-hide");
+        }
+
+        function closeNewRequestModal() {
+            document.getElementById("new-request-modal").classList.add("slds-hide");
+        }
+
+        function submitNewRequest() {
+            const fromDateVal = document.getElementById("from-date").value;
+            const toDateVal = document.getElementById("to-date").value;
+            const reasonVal = document.getElementById("reason").value;
+
+            if (!fromDateVal || !toDateVal || !reasonVal) {
+                alert("Please fill all fields!");
+                return;
+            }
+
+            // JavaScript side validations corresponding to the LWC Component Logic
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (fromDateVal < todayStr) {
+                showToast("Error", "From date should not be less than today!", "error");
+                return;
+            }
+
+            if (fromDateVal > toDateVal) {
+                showToast("Error", "From date should not be greater than To date!", "error");
+                return;
+            }
+
+            const newId = "LR-00" + (database.length + 1);
+            database.push({
+                id: newId,
+                user: currentUser,
+                fromDate: fromDateVal,
+                toDate: toDateVal,
+                reason: reasonVal,
+                status: "Pending",
+                comment: ""
+            });
+
+            closeNewRequestModal();
+            renderData();
+            showToast("Success", "Leave Request submitted successfully!");
+        }
+
+        function openReviewModal(reqId) {
+            activeReviewId = reqId;
+            const req = database.find(r => r.id === reqId);
+            
+            document.getElementById("review-details").innerHTML = `
+                <p><strong>Employee:</strong> ${req.user}</p>
+                <p><strong>Period:</strong> ${req.fromDate} to ${req.toDate}</p>
+                <p><strong>Reason:</strong> ${req.reason}</p>
+            `;
+            document.getElementById("review-status").value = "Approved";
+            document.getElementById("review-comment").value = "";
+            document.getElementById("review-modal").classList.remove("slds-hide");
+        }
+
+        function closeReviewModal() {
+            document.getElementById("review-modal").classList.add("slds-hide");
+            activeReviewId = null;
+        }
+
+        function saveReviewDecision() {
+            const decision = document.getElementById("review-status").value;
+            const comment = document.getElementById("review-comment").value;
+
+            const reqIndex = database.findIndex(r => r.id === activeReviewId);
+            if (reqIndex !== -1) {
+                database[reqIndex].status = decision;
+                database[reqIndex].comment = comment;
+            }
+
+            closeReviewModal();
+            renderData();
+            showToast("Success", `Request ${decision} successfully!`);
+        }
+
+        // Simulated LWC Edit for pending requests
+        function editMyRequest(reqId) {
+            const req = database.find(r => r.id === reqId);
+            if (!req) return;
+            
+            openNewRequestModal();
+            document.getElementById("from-date").value = req.fromDate;
+            document.getElementById("to-date").value = req.toDate;
+            document.getElementById("reason").value = req.reason;
+
+            // Remove old entry to simulate update on save
+            database = database.filter(r => r.id !== reqId);
+        }
+
+        // Custom Toast Notification Mimicry
+        function showToast(title, message, type = "success") {
+            const toast = document.getElementById("toast");
+            const toastMsg = document.getElementById("toast-message");
+            const toastContainer = toast.querySelector(".slds-notify");
+
+            toastMsg.innerText = message;
+            
+            if (type === "error") {
+                toastContainer.className = "slds-notify slds-notify_toast slds-theme_error";
+            } else {
+                toastContainer.className = "slds-notify slds-notify_toast slds-theme_success";
+            }
+
+            toast.style.display = "block";
+
+            setTimeout(() => {
+                toast.style.display = "none";
+            }, 3000);
+        }
+
+        // Initial Data Loading
+        window.onload = renderData;
+    </script>
+</body>
+</html>
